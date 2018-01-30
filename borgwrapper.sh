@@ -16,8 +16,12 @@ ACTION:
   your configuration file.
 
   The "gen-crontab" action will print a line suitable to be added to a
-  user's crontab file or a file in /etc/cron.d and exit. Use like so:
+  file in /etc/cron.d and exit. Use like so:
+
     CONFIG=/etc/borgwrapper.d "$0" > /etc/cron.d/borgwrapper
+
+  The generated entry may also be added to a user-specific crontab
+  file, in which case you simply need to remove the username field.
 
 CONFIGURATION FILE:
   Pass the configuration file in the CONFIG variable.
