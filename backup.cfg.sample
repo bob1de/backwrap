@@ -46,7 +46,7 @@ BORG_PRUNE_OPTS="--keep-daily 7 --keep-weekly 12 --keep-monthly 12 --keep-yearly
 # This setting will cause the backup to run every 24 hours. Precisely,
 # 24 hours would be 86400 seconds, but we lower the value by 60 seconds
 # in order to avoid a possible race condition in cron. Doing this will
-# actually result in an interval of exactly 24 hours, because borgwrapper
+# actually result in an interval of exactly 24 hours, because backwrap
 # only runs at minutes 0, 15, 30 and 45 of the hour. This has the
 # implication that backups can't be taken more often than every 15
 # minutes by default, but you can change the minimum interval in your
