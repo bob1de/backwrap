@@ -6,10 +6,10 @@ errcho() { echo $@ 1>&2; }
 
 usage() {
   cat 1>&2 << EOF
-Usage: [CONFIG=backup.cfg] $(basename "$0") [<ACTION>]
+Usage: [CONFIG=backup.cfg] $(basename "$0") <ACTION>
 
 ACTION:
-  The default action is "backup", which will run the backup right away.
+  The "backup" action will run the backup right away.
 
   The "backup-job" action is meant to be used from inside a crontab and
   will run a backup not more often than configured in JOB_INTERVAL in
@@ -72,7 +72,7 @@ fi
 
 # parse action
 case "$action" in
-  "backup" | "")
+  "backup")
     ;;
   "backup-job")
     if [ -z "$JOB_INTERVAL" ]; then

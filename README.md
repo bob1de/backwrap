@@ -34,12 +34,15 @@ for you.
 
 3. Run backwrap.
 
-       CONFIG=backup.cfg ./backwrap
+       # This will show the usage options.
+       ./backwrap
+       # And this will take a backup.
+       CONFIG=backup.cfg ./backwrap backup
 
 4. Optionally, set up a cronjob to take backups regularly.
 
        mkdir /etc/backwrap.d
-       cp backup.cfg /etc/backwrap.d
+       mv backup.cfg /etc/backwrap.d
        CONFIG=/etc/backwrap.d ./backwrap gen-crontab > /etc/cron.d/backwrap
 
 
