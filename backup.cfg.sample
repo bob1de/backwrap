@@ -1,0 +1,66 @@
+# Copy this file to backup.cfg and adapt settings according to your needs.
+
+
+# BACKUP
+
+# Paths to back up. These will be passed to borg as they are, so please
+# use absolute paths. Don't specify btrfs subvolumes here.
+SOURCES=(
+  "/etc"
+  "/var/log"
+)
+
+# Btrfs subvolumes to back up.
+# A read-only snapshot will be created of each subvolume and bind-mounted
+# to a directory named like the last path component of the subvolume.
+# For instance, "/home/myuser" will be mounted to the temporary directory
+# "myuser". And that is the name the contents of "/home/myuser" will end
+# up under in the backup archive. A special case is "/", which will be
+# mounted into "root".
+BTRFS_SOURCES=(
+  "/home"
+)
+# The name of the directory inside the subvolume to which the snapshot
+# will be taken. Please ensure that this directory doesn't exist in any
+# of the subvolumes you want to back up.
+BTRFS_SNAPNAME=".backup_snap"
+
+# The borg repository. This will be passed to borg directly as is.
+BORG_REPO="user@backup_host:borg"
+
+# Additional options you want to pass to the "borg create" command.
+BORG_CREATE_OPTS="--exclude-caches --keep-tag-files --exclude-if-present .nobackup"
+
+
+# RETENTION
+
+# Options you want to pass to the "borg prune" command. Configure your
+# retention policy here.
+BORG_PRUNE_OPTS="--keep-daily 7 --keep-weekly 12 --keep-monthly 12 --keep-yearly 2"
+
+
+# CRONTAB
+
+# How often (in seconds) you want to take backups. This is used e.g. by
+# the cronjob to determine how often to run.
+# This setting will cause the backup to run every 24 hours. Precisely,
+# 24 hours would be 86400 seconds, but we lower the value by 60 seconds
+# in order to avoid a possible race condition in cron. Doing this will
+# actually result in an interval of exactly 24 hours, because borgwrapper
+# only runs at minutes 0, 15, 30 and 45 of the hour. This has the
+# implication that backups can't be taken more often than every 15
+# minutes by default, but you can change the minimum interval in your
+# crontab entry if you really need to.
+JOB_INTERVAL=86340
+
+
+# SPECIAL FILES
+
+# There are two special files that, if they exist, are considered.
+# Let's assume the config file is called "/etc/backup.cfg", then the
+# script will look fo the following additional files in "/etc".
+# - backup.cfg.exclude: A list of paths to exclude, will be passed as
+#   "--exclude-from /etc/backup.cfg.exclude" to borg.
+# - backup.cfg.passphrase: A file containing the passphrase for the
+#   borg repository. It will be read into the BORG_PASSPHRASE variable
+#   and passed to borg.

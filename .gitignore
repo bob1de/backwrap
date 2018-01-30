@@ -1,0 +1,6 @@
+*.cfg
+*.pid
+*.last_job
+*.exclude
+*.passphrase
+*.mnt
