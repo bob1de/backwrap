@@ -12,7 +12,7 @@ ACTION:
   The "backup" action will run the backup right away.
 
   The "backup-job" action is meant to be used from inside a crontab and
-  will run a backup not more often than configured in JOB_INTERVAL in
+  will run a backup not more often than configured in JOB_INTERVAL_* in
   your configuration file.
 
   The "gen-crontab" action will print a line suitable to be added to a
@@ -75,16 +75,22 @@ case "$action" in
   "backup")
     ;;
   "backup-job")
-    if [ -z "$JOB_INTERVAL" ]; then
-      errcho "ERROR: JOB_INTERVAL not configured."
+    [ -n "${JOB_INTERVAL##*[!0-9]*}" ] && i=$JOB_INTERVAL || i=0
+    [ -n "${JOB_INTERVAL_MINUTES##*[!0-9]*}" ] && i=$(($i + 60 * $JOB_INTERVAL_MINUTES))
+    [ -n "${JOB_INTERVAL_HOURS##*[!0-9]*}" ] && i=$(($i + 3600 * $JOB_INTERVAL_HOURS))
+    [ -n "${JOB_INTERVAL_DAYS##*[!0-9]*}" ] && i=$(($i + 86400 * $JOB_INTERVAL_DAYS))
+    if [ $i -eq 0 ]; then
+      errcho "ERROR: JOB_INTERVAL_* not configured."
       exit 1
     fi
+    # subtract 10 seconds to avoid race condition with cron
+    JOB_INTERVAL=$(($i - 10))
     now="$(date +%s)"
     tsfile="$CONFIG.last_job"
     if [ -e "$tsfile" ]; then
       modinterval=$(("$now" - "$(cat "$tsfile")"))
       if [ "$modinterval" -lt "$JOB_INTERVAL" ]; then
-        echo "No backup needed, JOB_INTERVAL hasn't passed since last run."
+        echo "No backup needed according to the configured interval."
         exit 0
       fi
     fi

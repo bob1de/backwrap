@@ -41,17 +41,15 @@ BORG_PRUNE_OPTS="--keep-daily 7 --keep-weekly 12 --keep-monthly 12 --keep-yearly
 
 # CRONTAB
 
-# How often (in seconds) you want to take backups. This is used e.g. by
+# Configure how often you want to take backups. This is used e.g. by
 # the cronjob to determine how often to run.
-# This setting will cause the backup to run every 24 hours. Precisely,
-# 24 hours would be 86400 seconds, but we lower the value by 60 seconds
-# in order to avoid a possible race condition in cron. Doing this will
-# actually result in an interval of exactly 24 hours, because backwrap
-# only runs at minutes 0, 15, 30 and 45 of the hour. This has the
-# implication that backups can't be taken more often than every 15
-# minutes by default, but you can change the minimum interval in your
-# crontab entry if you really need to.
-JOB_INTERVAL=86340
+# You may set one or more of these settings. All configured JOB_INTERVAL_*
+# settings will be added together in order to calculate the desired
+# interval. If you enable all three sample lines below, a backup would
+# be taken every 2 days, 12 hours, 30 minutes.
+#JOB_INTERVAL_DAYS=2
+#JOB_INTERVAL_HOURS=12
+#JOB_INTERVAL_MINUTES=30
 
 
 # SPECIAL FILES
