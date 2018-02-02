@@ -118,8 +118,8 @@ esac
 BTRFS_SNAPNAME="$(basename "$BTRFS_SNAPNAME")"
 
 # build paths for later use
-exclude_file="$CONFIG.exclude"
-passphrase_file="$CONFIG.passphrase"
+exclude_file="$(realpath "$CONFIG.exclude")"
+passphrase_file="$(realpath "$CONFIG.passphrase")"
 
 # Try to generate an unique hash from the location of the config file
 # to build paths for temporary files.
