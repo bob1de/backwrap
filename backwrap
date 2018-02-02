@@ -70,6 +70,17 @@ fi
 . "$CONFIG"
 
 
+# validate BACKUP_TOOL setting
+case "$BACKUP_TOOL" in
+  "borg" | "restic")
+    ;;
+  *)
+    errcho "ERROR: Set BACKUP_TOOL to one of: 'borg', 'restic'"
+    exit 1
+    ;;
+esac
+
+
 # parse action
 case "$action" in
   "backup")
@@ -114,8 +125,8 @@ passphrase_file="$CONFIG.passphrase"
 # to build paths for temporary files.
 hash md5sum && read cfgsum <<< "$(md5sum <<< "$CONFIG" | cut -c-16)"
 if [ -n "$cfgsum" ]; then
-  pidfile="$(realpath "/tmp/borgwrapper.$cfgsum.pid")"
-  mountdir="$(realpath "/tmp/borgwrapper.$cfgsum.mnt")"
+  pidfile="$(realpath "/tmp/backwrap.$cfgsum.pid")"
+  mountdir="$(realpath "/tmp/backwrap.$cfgsum.mnt")"
 else
   pidfile="$CONFIG.pid"
   mountdir="$CONFIG.mnt"
@@ -127,14 +138,21 @@ if [ -e "$passphrase_file" ] && [ "$(stat -c %a "$passphrase_file")" -gt 660 ]; 
 fi
 
 if [ -e "$exclude_file" ]; then
-  BORG_CREATE_OPTS="$BORG_CREATE_OPTS --exclude-from ${exclude_file}"
+  case "$BACKUP_TOOL" in
+    "borg")
+      BORG_CREATE_OPTS+=" --exclude-from $exclude_file"
+      ;;
+    "restic")
+      RESTIC_BACKUP_OPTS+=" --exclude-file $exclude_file"
+      ;;
+  esac
 fi
 
 
 # create lock for this config
 hash flock
 if [ "$?" -ne 0 ]; then
-  errcho "ERROR: borgwrapper requires the flock(1) command."
+  errcho "ERROR: backwrap requires the flock(1) command."
   exit 1
 fi
 exec {fd}>>"$pidfile"
@@ -191,11 +209,21 @@ paths+=("${mountnames[@]}")
 if [ ${#paths[@]} -gt 0 ]; then
   archname="$(date +%Y-%m-%d_%H:%M:%S)"
 
-  export BORG_REPO
-  export BORG_PASSPHRASE="$(cat "$passphrase_file" /dev/null)"
-  borg create $BORG_CREATE_OPTS "::$archname" "${paths[@]}"
-  rc=$?
-  unset BORG_PASSPHRASE
+  case "$BACKUP_TOOL" in
+    "borg")
+      export BORG_REPO
+      export BORG_PASSPHRASE="$(cat "$passphrase_file" /dev/null)"
+      borg create $BORG_CREATE_OPTS "::$archname" "${paths[@]}"
+      rc=$?
+      unset BORG_PASSPHRASE
+      ;;
+    "restic")
+      export RESTIC_REPOSITORY="$RESTIC_REPO"
+      export RESTIC_PASSWORD_FILE="$passphrase_file"
+      restic backup $RESTIC_BACKUP_OPTS --tag "$archname" "${paths[@]}"
+      rc=$?
+      ;;
+  esac
 fi
 
 
@@ -213,11 +241,20 @@ if [ "$rc" -ne 0 ]; then
   errcho "ERROR: Backup failed."
 else
   # prune old backups
-  if [ -n "$BORG_PRUNE_OPTS" ]; then
-    export BORG_PASSPHRASE="$(cat "$passphrase_file" /dev/null)"
-    borg prune $BORG_PRUNE_OPTS ::
-    unset BORG_PASSPHRASE
-  fi
+  case "$BACKUP_TOOL" in
+    "borg")
+      if [ -n "$BORG_PRUNE_OPTS" ]; then
+        export BORG_PASSPHRASE="$(cat "$passphrase_file" /dev/null)"
+        borg prune $BORG_PRUNE_OPTS ::
+        unset BORG_PASSPHRASE
+      fi
+      ;;
+    "restic")
+      if [ -n "$RESTIC_FORGET_OPTS" ]; then
+        restic forget $RESTIC_FORGET_OPTS
+      fi
+      ;;
+  esac
 
   # update timestamp
   [ "$action" == "backup-job" ] && echo "$now" > "$tsfile"

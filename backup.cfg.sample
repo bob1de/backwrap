@@ -25,18 +25,40 @@ BTRFS_SOURCES=(
 # of the subvolumes you want to back up.
 BTRFS_SNAPNAME=".backup_snap"
 
+
+# BACKUP TOOL
+#
+# Available choices: borg, restic
+#
+# You only need to configure the settings for the particular backup tool
+# you choose.
+BACKUP_TOOL=borg
+
+
+# BORG OPTIONS
+
 # The borg repository. This will be passed to borg directly as is.
 BORG_REPO="user@backup_host:borg"
 
 # Additional options you want to pass to the "borg create" command.
 BORG_CREATE_OPTS="--exclude-caches --keep-tag-files --exclude-if-present .nobackup"
 
-
-# RETENTION
-
 # Options you want to pass to the "borg prune" command. Configure your
 # retention policy here.
 BORG_PRUNE_OPTS="--keep-daily 7 --keep-weekly 12 --keep-monthly 12 --keep-yearly 2"
+
+
+# RESTIC OPTIONS
+
+# The restic repository. This will be passed to restic as $RESTIC_REPOSITORY.
+RESTIC_REPO="sftp://user@backup_host/restic"
+
+# Additional options you want to pass to the "restic backup" command.
+RESTIC_BACKUP_OPTS="--exclude-caches --exclude-if-present .nobackup"
+
+# Options you want to pass to the "restic forget" command. Configure your
+# retention policy here.
+RESTIC_FORGET_OPTS="--keep-daily 7 --keep-weekly 12 --keep-monthly 12 --keep-yearly 2"
 
 
 # CRONTAB

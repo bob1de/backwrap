@@ -1,6 +1,6 @@
 # backwrap
 
-A bash based wrapper for creating backups with borg.
+A bash based wrapper for creating backups with borg or restic.
 
 Compared to the well-known borgmatic, this wrapper follows another
 philosophy. It aims to have no dependencies other than bash, flock and
