@@ -1,6 +1,12 @@
 #!/bin/bash
 
 
+# return status codes
+USAGE_RC=-127
+LOCKED_RC=-126
+MULTIPLE_FAILED_RC=-125
+
+
 # helper functions
 errcho() { echo $@ 1>&2; }
 
@@ -29,8 +35,20 @@ CONFIGURATION FILE:
   and any of it's subdirectories ending in .cfg will be processed in
   sequence. The default config file is "backup.cfg" in the current
   working directory.
+
+EXIT CODE
+  backwrap indicates the result of its task by exiting with one of the
+  following status codes:
+        0: Success
+     -127: Faulty configuration or parameters.
+     -126: The configuration is still locked, hence the backup action
+           didn't run.
+     -125: Backwrap ran on a configuration directory and one or more of
+           the configuration files in it failed to run.
+    other: The result of the last failed child process such as restic
+           or btrfs.
 EOF
-  exit 1
+  exit $USAGE_RC
 }
 
 
@@ -57,11 +75,14 @@ fi
 
 # handle config directories
 if [ -d "$CONFIG" ]; then
+  rc=0
   while read cfgfile; do
     [ -z "$cfgfile" ] && continue
-    CONFIG="$cfgfile" exec "$0" "$@"
+    CONFIG="$cfgfile" "$0" "$@"
+    _rc=$?
+    [ "$_rc" -ne 0 ] && rc=$MULTIPLE_FAILED_RC
   done <<< `find "$CONFIG" -type f -name \*.cfg`
-  exit
+  exit $rc
 fi
 
 
@@ -76,7 +97,7 @@ case "$BACKUP_TOOL" in
     ;;
   *)
     errcho "ERROR: Set BACKUP_TOOL to one of: 'borg', 'restic'"
-    exit 1
+    exit $USAGE_RC
     ;;
 esac
 
@@ -92,7 +113,7 @@ case "$action" in
     [ -n "${JOB_INTERVAL_DAYS##*[!0-9]*}" ] && i=$(($i + 86400 * $JOB_INTERVAL_DAYS))
     if [ $i -eq 0 ]; then
       errcho "ERROR: JOB_INTERVAL_* not configured."
-      exit 1
+      exit $USAGE_RC
     fi
     # subtract 10 seconds to avoid race condition with cron
     JOB_INTERVAL=$(($i - 10))
@@ -149,35 +170,35 @@ if [ -e "$exclude_file" ]; then
 fi
 
 
+# this records the overall return code of backwrap and is updated when
+# a child process fails
+rc=0
+
+
 # create lock for this config
 hash flock
 if [ "$?" -ne 0 ]; then
   errcho "ERROR: backwrap requires the flock(1) command."
-  exit 1
+  exit $USAGE_RC
 fi
 exec {fd}>>"$pidfile"
 flock -n "$fd"
 if [ "$?" != "0" ]; then
   if [ "$action" == "backup-job" ]; then
     echo "$pidfile is still locked, not running backup job."
-    if [ -n "$modinterval" ] && [ "$modinterval" -ge "$JOB_INTERVAL" ]; then
-      errcho "WARNING: Last successful job ran more than $JOB_INTERVAL seconds before."
-      exit 1
-    fi
     exit 0
   else
     errcho "ERROR: $pidfile is still locked, is there another job running?"
-    exit 1
+    exit $LOCKED_RC
   fi
 fi
 pid=$$
-echo $pid >"$pidfile"
+echo $pid > "$pidfile"
 
 
 # create and mount snapshots of btrfs subvolumes
-mkdir -p "$mountdir"
-chmod 700 "$mountdir"
-cd "$mountdir"
+mkdir -p "$mountdir" && chmod 700 "$mountdir" && cd "$mountdir"
+rc=$? && [ "$rc" -eq 0 ] || exit $rc
 
 snaplocs=()
 mountnames=()
@@ -191,6 +212,7 @@ for src in "${BTRFS_SOURCES[@]}"; do
 
   if [ -d "$snaploc" ]; then
     btrfs subvolume delete "$snaploc"
+    rc=$? && [ "$rc" -eq 0 ] || exit $rc
   fi
 
   btrfs subvolume snapshot -r "$src" "$snaploc" && \
@@ -198,6 +220,7 @@ for src in "${BTRFS_SOURCES[@]}"; do
   mkdir -p "$mountname" && \
   mount --bind "$snaploc" "$mountname" && \
   mountnames+=("$mountname")
+  rc=$? && [ "$rc" -eq 0 ] || exit $rc
 done
 
 
@@ -227,14 +250,14 @@ if [ ${#paths[@]} -gt 0 ]; then
 fi
 
 
-# umount and delete btrfs snapshots
+# unmount and delete btrfs snapshots
 for mountname in "${mountnames[@]}"; do
-  umount -f "$mountname" && [ "$(ls -A "$mountname")" ] || rm -rf "$mountname"
+  umount -f "$mountname" && [ -z "$(ls -A "$mountname")" ] && rm -rf "$mountname"
 done
 cd ..
-[ "$(ls -A "$mountdir")" ] || rm -rf "$mountdir"
+[ -z "$(ls -A "$mountdir")" ] && rm -rf "$mountdir"
 
-[ ${#snaplocs[@]} -gt 0 ] && btrfs subvolume delete "${snaplocs[@]}"
+[ "${#snaplocs[@]}" -gt 0 ] && btrfs subvolume delete "${snaplocs[@]}"
 
 
 if [ "$rc" -ne 0 ]; then
@@ -246,12 +269,14 @@ else
       if [ -n "$BORG_PRUNE_OPTS" ]; then
         export BORG_PASSPHRASE="$(cat "$passphrase_file" /dev/null)"
         borg prune $BORG_PRUNE_OPTS ::
+        rc=$?
         unset BORG_PASSPHRASE
       fi
       ;;
     "restic")
       if [ -n "$RESTIC_FORGET_OPTS" ]; then
         restic forget $RESTIC_FORGET_OPTS
+        rc=$?
       fi
       ;;
   esac
