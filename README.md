@@ -52,3 +52,30 @@ Simply pull upgrades from the master branch.
 
     cd /path/to/your/backwrap/repository
     git pull
+
+
+## Backing up to SFTP
+
+When backing up to a SFTP server which listens on a port other than 22,
+or which requires public key authentication with a key other than your
+default ``id_rsa``, you can create a custom host configuration in
+``~/.ssh/config``:
+
+    Host backup_host
+      Hostname my-backup-server.de
+      Port 12322
+      User backup_user
+      IdentityFile /root/.ssh/id_rsa_backup
+      LogLevel ERROR
+
+The ``LogLevel ERROR`` causes OpenSSH to not print a warning when the
+host's IP address changed, which will happen when using dynamic DNS.
+
+Now, you just need to specify the repository in the backwrap config
+like so:
+
+    RESTIC_REPO="sftp://backup_host/restic"
+
+or
+
+    BORG_REPO="backup_host:borg"
