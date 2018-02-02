@@ -37,7 +37,7 @@ for you.
        # This will show the usage options.
        ./backwrap
        # And this will take a backup.
-       CONFIG=backup.cfg ./backwrap backup
+       ./backwrap backup
 
 4. Optionally, set up a cronjob to take backups regularly.
 
