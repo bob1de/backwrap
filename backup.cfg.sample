@@ -20,10 +20,6 @@ SOURCES=(
 BTRFS_SOURCES=(
   "/home"
 )
-# The name of the directory inside the subvolume to which the snapshot
-# will be taken. Please ensure that this directory doesn't exist in any
-# of the subvolumes you want to back up.
-BTRFS_SNAPNAME=".backup_snap"
 
 
 # BACKUP TOOL

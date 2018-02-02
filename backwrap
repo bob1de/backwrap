@@ -47,6 +47,7 @@ EXIT CODE
            the configuration files in it failed to run.
     other: The result of the last failed child process such as restic
            or btrfs.
+
 EOF
   exit $USAGE_RC
 }
@@ -60,6 +61,14 @@ CONFIG="$(realpath "$CONFIG")"
 if [ ! -e "$CONFIG" ]; then
   errcho "ERROR: config file $CONFIG doesn't exist"
   usage
+fi
+
+
+# check if all required commands are available
+hash cut && hash flock && hash md5sum && hash sed
+if [ "$?" -ne 0 ]; then
+  errcho "ERROR: Backwrap needs the cut, flock, md5sum and sed commands."
+  exit $USAGE_RC
 fi
 
 
@@ -98,7 +107,7 @@ case "$BACKUP_TOOL" in
   "borg" | "restic")
     ;;
   *)
-    errcho "ERROR: Set BACKUP_TOOL to one of: 'borg', 'restic'"
+    errcho "ERROR: Set BACKUP_TOOL in your configuration."
     exit $USAGE_RC
     ;;
 esac
@@ -137,23 +146,16 @@ esac
 
 # rewrite some config variables
 
-# ensure snapshot name has only one path component
-BTRFS_SNAPNAME="$(basename "$BTRFS_SNAPNAME")"
-
 # build paths for later use
 exclude_file="$(realpath "$CONFIG.exclude")"
 passphrase_file="$(realpath "$CONFIG.passphrase")"
 
-# Try to generate an unique hash from the location of the config file
-# to build paths for temporary files.
-hash md5sum && read cfgsum <<< "$(md5sum <<< "$CONFIG" | cut -c-16)"
-if [ -n "$cfgsum" ]; then
-  pidfile="$(realpath "/tmp/backwrap.$cfgsum.pid")"
-  mountdir="$(realpath "/tmp/backwrap.$cfgsum.mnt")"
-else
-  pidfile="$CONFIG.pid"
-  mountdir="$CONFIG.mnt"
-fi
+# generate an unique hash from the location of the config file to build
+# paths for temporary files.
+read cfgsum <<< "$(md5sum <<< "$CONFIG" | cut -c-16)"
+pidfile="$(realpath "/tmp/backwrap.$cfgsum.pid")"
+mountdir="$(realpath "/tmp/backwrap.$cfgsum.mnt")"
+btrfs_snapname=".backwrap.$cfgsum.snap"
 
 if [ -e "$passphrase_file" ] && [ "$(stat -c %a "$passphrase_file")" -gt 660 ]; then
   errcho "WARNING: $passphrase_file is world-readable, doing chmod 660."
@@ -172,17 +174,7 @@ if [ -e "$exclude_file" ]; then
 fi
 
 
-# this records the overall return code of backwrap and is updated when
-# a child process fails
-rc=0
-
-
 # create lock for this config
-hash flock
-if [ "$?" -ne 0 ]; then
-  errcho "ERROR: backwrap requires the flock(1) command."
-  exit $USAGE_RC
-fi
 exec {fd}>>"$pidfile"
 flock -n "$fd"
 if [ "$?" != "0" ]; then
@@ -205,7 +197,7 @@ rc=$? && [ "$rc" -eq 0 ] || exit $rc
 snaplocs=()
 mountnames=()
 for src in "${BTRFS_SOURCES[@]}"; do
-  snaploc="$src/$BTRFS_SNAPNAME"
+  snaploc="$src/$btrfs_snapname"
 
   mountname="$(basename "$src")"
   if [ "$mountname" == "/" ]; then

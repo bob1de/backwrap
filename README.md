@@ -1,11 +1,12 @@
 # backwrap
 
-A bash based wrapper for creating backups with borg or restic.
+A simple wrapper for creating backups written in bash. It currently
+supports borg and restic as backup tools.
 
 Compared to the well-known borgmatic, this wrapper follows another
-philosophy. It aims to have no dependencies other than bash, flock and
-the utilities like date and find that are most likely to be present
-on every GNU/Linux system.
+philosophy. It aims to have no dependencies other than bash and
+some utilities that are most likely to be present on every GNU/Linux
+system.
 
 In addition to regular files and directories, backwrap can
 automatically snapshot btrfs subvolumes before backing them up, which
