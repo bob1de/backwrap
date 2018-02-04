@@ -287,6 +287,9 @@ cd ..
 if [ "$rc" -ne 0 ]; then
   errcho "ERROR: Backup failed."
 else
+  # update timestamp
+  [ "$action" == "backup-job" ] && echo "$now" > "$tsfile"
+
   # prune old backups
   case "$BACKUP_TOOL" in
     "borg")
@@ -302,9 +305,6 @@ else
       fi
       ;;
   esac
-
-  # update timestamp
-  [ "$action" == "backup-job" ] && echo "$now" > "$tsfile"
 fi
 
 
