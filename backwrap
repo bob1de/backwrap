@@ -21,6 +21,11 @@ ACTION:
   will run a backup not more often than configured in JOB_INTERVAL_* in
   your configuration file.
 
+  The "init" action will initialize an empty repository with the backup
+  tool you configured. It fetches all required settings such as the
+  repository's URL and passphrase from the configuration file and hence
+  needs no further parameters.
+
   The "gen-crontab" action will print a line suitable to be added to a
   file in /etc/cron.d and exit. Use like so:
 
@@ -50,6 +55,22 @@ EXIT CODE
 
 EOF
   exit $USAGE_RC
+}
+
+# run backup tool with particular environment
+
+run_borg() {
+  export BORG_REPO
+  export BORG_PASSPHRASE="$(cat "$passphrase_file" /dev/null)"
+  borg "$@"
+  return $?
+}
+
+run_restic() {
+  export RESTIC_REPOSITORY="$RESTIC_REPO"
+  export RESTIC_PASSWORD_FILE="$passphrase_file"
+  restic "$@"
+  return $?
 }
 
 
@@ -85,14 +106,15 @@ fi
 # handle config directories
 if [ -d "$CONFIG" ]; then
   rc=0
-  while read cfgfile; do
+  cfgfiles=`find "$CONFIG" -type f -name \*.cfg`
+  exec {fd}<<<`find "$CONFIG" -type f -name \*.cfg`
+  while read -u $fd cfgfile; do
     [ -z "$cfgfile" ] && continue
     cfgname="$(basename "$cfgfile")"
     echo "Running for $cfgfile ..."
     CONFIG="$cfgfile" "$0" "$@" | sed "s/^/[$cfgname]  /"
-    _rc=$?
-    [ "$_rc" -ne 0 ] && rc=$MULTIPLE_FAILED_RC
-  done <<< `find "$CONFIG" -type f -name \*.cfg`
+    [ "${PIPESTATUS[0]}" -ne 0 ] && rc=$MULTIPLE_FAILED_RC
+  done
   exit $rc
 fi
 
@@ -109,37 +131,6 @@ case "$BACKUP_TOOL" in
   *)
     errcho "ERROR: Set BACKUP_TOOL in your configuration."
     exit $USAGE_RC
-    ;;
-esac
-
-
-# parse action
-case "$action" in
-  "backup")
-    ;;
-  "backup-job")
-    [ -n "${JOB_INTERVAL##*[!0-9]*}" ] && i=$JOB_INTERVAL || i=0
-    [ -n "${JOB_INTERVAL_MINUTES##*[!0-9]*}" ] && i=$(($i + 60 * $JOB_INTERVAL_MINUTES))
-    [ -n "${JOB_INTERVAL_HOURS##*[!0-9]*}" ] && i=$(($i + 3600 * $JOB_INTERVAL_HOURS))
-    [ -n "${JOB_INTERVAL_DAYS##*[!0-9]*}" ] && i=$(($i + 86400 * $JOB_INTERVAL_DAYS))
-    if [ $i -eq 0 ]; then
-      errcho "ERROR: JOB_INTERVAL_* not configured."
-      exit $USAGE_RC
-    fi
-    # subtract 10 seconds to avoid race condition with cron
-    JOB_INTERVAL=$(($i - 10))
-    now="$(date +%s)"
-    tsfile="$CONFIG.last_job"
-    if [ -e "$tsfile" ]; then
-      modinterval=$(("$now" - "$(cat "$tsfile")"))
-      if [ "$modinterval" -lt "$JOB_INTERVAL" ]; then
-        echo "No backup needed according to the configured interval."
-        exit 0
-      fi
-    fi
-    ;;
-  *)
-    usage
     ;;
 esac
 
@@ -172,6 +163,50 @@ if [ -e "$exclude_file" ]; then
       ;;
   esac
 fi
+
+
+# parse action
+case "$action" in
+  "backup")
+    ;;
+  "backup-job")
+    [ -n "${JOB_INTERVAL##*[!0-9]*}" ] && i=$JOB_INTERVAL || i=0
+    [ -n "${JOB_INTERVAL_MINUTES##*[!0-9]*}" ] && i=$(($i + 60 * $JOB_INTERVAL_MINUTES))
+    [ -n "${JOB_INTERVAL_HOURS##*[!0-9]*}" ] && i=$(($i + 3600 * $JOB_INTERVAL_HOURS))
+    [ -n "${JOB_INTERVAL_DAYS##*[!0-9]*}" ] && i=$(($i + 86400 * $JOB_INTERVAL_DAYS))
+    if [ $i -eq 0 ]; then
+      errcho "ERROR: JOB_INTERVAL_* not configured."
+      exit $USAGE_RC
+    fi
+    # subtract 10 seconds to avoid race condition with cron
+    JOB_INTERVAL=$(($i - 10))
+    now="$(date +%s)"
+    tsfile="$CONFIG.last_job"
+    if [ -e "$tsfile" ]; then
+      modinterval=$(("$now" - "$(cat "$tsfile")"))
+      if [ "$modinterval" -lt "$JOB_INTERVAL" ]; then
+        echo "No backup needed according to the configured interval."
+        exit 0
+      fi
+    fi
+    ;;
+  "init")
+    case "$BACKUP_TOOL" in
+      "borg")
+        run_borg init $BORG_INIT_OPTS
+        rc=$?
+        ;;
+      "restic")
+        run_restic init $RESTIC_INIT_OPTS
+        rc=$?
+        ;;
+    esac
+    exit $rc
+    ;;
+  *)
+    usage
+    ;;
+esac
 
 
 # create lock for this config
@@ -228,16 +263,11 @@ if [ ${#paths[@]} -gt 0 ]; then
 
   case "$BACKUP_TOOL" in
     "borg")
-      export BORG_REPO
-      export BORG_PASSPHRASE="$(cat "$passphrase_file" /dev/null)"
-      borg create $BORG_CREATE_OPTS "::$archname" "${paths[@]}"
+      run_borg create $BORG_CREATE_OPTS "::$archname" "${paths[@]}"
       rc=$?
-      unset BORG_PASSPHRASE
       ;;
     "restic")
-      export RESTIC_REPOSITORY="$RESTIC_REPO"
-      export RESTIC_PASSWORD_FILE="$passphrase_file"
-      restic backup $RESTIC_BACKUP_OPTS --tag "$archname" "${paths[@]}"
+      run_restic backup $RESTIC_BACKUP_OPTS --tag "$archname" "${paths[@]}"
       rc=$?
       ;;
   esac
@@ -261,15 +291,13 @@ else
   case "$BACKUP_TOOL" in
     "borg")
       if [ -n "$BORG_PRUNE_OPTS" ]; then
-        export BORG_PASSPHRASE="$(cat "$passphrase_file" /dev/null)"
-        borg prune $BORG_PRUNE_OPTS ::
+        run_borg prune $BORG_PRUNE_OPTS ::
         rc=$?
-        unset BORG_PASSPHRASE
       fi
       ;;
     "restic")
       if [ -n "$RESTIC_FORGET_OPTS" ]; then
-        restic forget $RESTIC_FORGET_OPTS
+        run_restic forget $RESTIC_FORGET_OPTS
         rc=$?
       fi
       ;;

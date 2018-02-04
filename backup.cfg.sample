@@ -43,6 +43,9 @@ BORG_CREATE_OPTS="--exclude-caches --keep-tag-files --exclude-if-present .noback
 # retention policy here.
 BORG_PRUNE_OPTS="--keep-daily 7 --keep-weekly 12 --keep-monthly 12 --keep-yearly 2"
 
+# Additional options you want to pass to the "borg init" command.
+BORG_INIT_OPTS=""
+
 
 # RESTIC OPTIONS
 
@@ -55,6 +58,9 @@ RESTIC_BACKUP_OPTS="--exclude-caches --exclude-if-present .nobackup"
 # Options you want to pass to the "restic forget" command. Configure your
 # retention policy here.
 RESTIC_FORGET_OPTS="--keep-daily 7 --keep-weekly 12 --keep-monthly 12 --keep-yearly 2"
+
+# Additional options you want to pass to the "restic init" command.
+RESTIC_INIT_OPTS=""
 
 
 # CRONTAB

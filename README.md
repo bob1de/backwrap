@@ -30,13 +30,19 @@ for you.
 
        cd backwrap
        cp backup.cfg.sample backup.cfg
+
+       # Make your changes as documented in the sample configuration.
        vim backup.cfg
-       # ... make your changes as documented in the sample configuration
 
 3. Run backwrap.
 
        # This will show the usage options.
        ./backwrap
+
+       # If you haven't done already, initialize the borg/restic
+       # repository to store your backups.
+       ./backwrap init
+
        # And this will take a backup.
        ./backwrap backup
 
