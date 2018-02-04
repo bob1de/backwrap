@@ -71,6 +71,9 @@ RESTIC_INIT_OPTS=""
 # settings will be added together in order to calculate the desired
 # interval. If you enable all three sample lines below, a backup would
 # be taken every 2 days, 12 hours, 30 minutes.
+# Backwrap can also deal with systems like notebooks that aren't on
+# 24/7. It is always tried to align as closely as permitted by system
+# uptime with the configured schedule.
 #JOB_INTERVAL_DAYS=2
 #JOB_INTERVAL_HOURS=12
 #JOB_INTERVAL_MINUTES=30
