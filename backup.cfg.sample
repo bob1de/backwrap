@@ -3,8 +3,8 @@
 
 # BACKUP
 
-# Paths to back up. These will be passed to borg as they are, so please
-# use absolute paths. Don't specify btrfs subvolumes here.
+# Paths to back up. These will be passed to the backup tool as they are,
+# so please use absolute paths. Don't specify btrfs subvolumes here.
 SOURCES=(
   "/etc"
   "/var/log"
@@ -17,6 +17,7 @@ SOURCES=(
 # "myuser". And that is the name the contents of "/home/myuser" will end
 # up under in the backup archive. A special case is "/", which will be
 # mounted into "root".
+# If you don't use Btrfs, simply leave this array empty or comment it out.
 BTRFS_SOURCES=(
   "/home"
 )

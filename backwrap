@@ -75,12 +75,10 @@ run_restic() {
 
 
 # check for existence of config file
-if [ -z "$CONFIG" ]; then
-  CONFIG=backup.cfg
-fi
+[ -n "$CONFIG" ] || CONFIG="backup.cfg"
 CONFIG="$(realpath "$CONFIG")"
 if [ ! -e "$CONFIG" ]; then
-  errcho "ERROR: config file $CONFIG doesn't exist"
+  errcho "ERROR: config file '$CONFIG' doesn't exist"
   usage
 fi
 
@@ -217,7 +215,7 @@ if [ "$?" != "0" ]; then
     echo "$pidfile is still locked, not running backup job."
     exit 0
   else
-    errcho "ERROR: $pidfile is still locked, is there another job running?"
+    errcho "ERROR: '$pidfile' is still locked, is there another job running?"
     exit $LOCKED_RC
   fi
 fi
@@ -232,6 +230,11 @@ rc=$? && [ "$rc" -eq 0 ] || exit $rc
 snaplocs=()
 mountnames=()
 for src in "${BTRFS_SOURCES[@]}"; do
+  if [ -z "$src" ] || [ ! -d "$src" ]; then
+    errcho "ERROR: Btrfs subvolume at '$src' doesn't exist, skipping."
+    continue
+  fi
+
   snaploc="$src/$btrfs_snapname"
 
   mountname="$(basename "$src")"
@@ -285,7 +288,7 @@ cd ..
 
 
 if [ "$rc" -ne 0 ]; then
-  errcho "ERROR: Backup failed."
+  errcho "ERROR: Backup failed!"
 else
   # update timestamp
   [ "$action" == "backup-job" ] && echo "$now" > "$tsfile"
