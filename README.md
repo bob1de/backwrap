@@ -39,8 +39,10 @@ for you.
        # This will show the usage options.
        ./backwrap
 
-       # If you haven't done already, initialize the borg/restic
-       # repository to store your backups.
+       # If you haven't done already, generate a secure passphrase and
+       # initialize the borg/restic repository to store your backups.
+       umask 077
+       pwgen -s 40 1 > backup.cfg.passphrase
        ./backwrap init
 
        # And this will take a backup.
