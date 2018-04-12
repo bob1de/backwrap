@@ -235,7 +235,7 @@ for src in "${BTRFS_SOURCES[@]}"; do
     continue
   fi
 
-  snaploc="$src/$btrfs_snapname"
+  snaploc="$(realpath "$src/$btrfs_snapname")"
 
   mountname="$(basename "$src")"
   if [ "$mountname" == "/" ]; then
