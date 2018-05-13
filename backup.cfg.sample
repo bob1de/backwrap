@@ -86,7 +86,6 @@ RESTIC_INIT_OPTS=""
 # Let's assume the config file is called "/etc/backup.cfg", then the
 # script will look fo the following additional files in "/etc".
 # - backup.cfg.exclude: A list of paths to exclude, will be passed as
-#   "--exclude-from /etc/backup.cfg.exclude" to borg.
+#   the exclude file to the backup tool.
 # - backup.cfg.passphrase: A file containing the passphrase for the
-#   borg repository. It will be read into the BORG_PASSPHRASE variable
-#   and passed to borg.
+#   repository.
