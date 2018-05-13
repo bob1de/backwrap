@@ -8,7 +8,7 @@ philosophy. It aims to have no dependencies other than bash and
 some utilities that are most likely to be present on every GNU/Linux
 system.
 
-In addition to regular files and directories, backwrap can
+In addition to handling regular files and directories, backwrap can
 automatically snapshot btrfs subvolumes before backing them up, which
 is a must when consistency matters (e.g. for database backups).
 
@@ -51,7 +51,7 @@ for you.
 4. Optionally, set up a cronjob to take backups regularly.
 
        mkdir /etc/backwrap.d
-       mv backup.cfg /etc/backwrap.d
+       mv backup.cfg backup.cfg.passphrase /etc/backwrap.d
        CONFIG=/etc/backwrap.d ./backwrap gen-crontab > /etc/cron.d/backwrap
 
 
