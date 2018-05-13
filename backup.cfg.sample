@@ -21,15 +21,22 @@ SOURCES=(
 BTRFS_SOURCES=(
   "/home"
 )
+# Path of the directory (relative to the paths specified in BTRFS_SOURCES)
+# in which the snapshots should be stored.
+BTRFS_SNAPDIR=".snap"
+# Number of snapshots to keep locally. When the number of snapshots
+# grows beyond this number, the oldest ones are deleted. 0 means
+# keeping no local snapshots (the default behaviour).
+BTRFS_KEEP_SNAPSHOTS=0
 
 
 # BACKUP TOOL
 #
-# Available choices: borg, restic
+# Available choices: "borg", "restic"
 #
 # You only need to configure the settings for the particular backup tool
 # you choose.
-BACKUP_TOOL=borg
+BACKUP_TOOL="borg"
 
 
 # BORG OPTIONS

@@ -134,6 +134,8 @@ esac
 
 
 # rewrite some config variables
+[ -z "$BTRFS_SNAPDIR" ] && BTRFS_SNAPDIR=".snap"
+[ -z "$BTRFS_KEEP_SNAPSHOTS" ] && BTRFS_KEEP_SNAPSHOTS=0
 
 # build paths for later use
 exclude_file="$(realpath "$CONFIG.exclude")"
@@ -227,7 +229,7 @@ echo $pid > "$pidfile"
 mkdir -p "$mountdir" && chmod 700 "$mountdir" && cd "$mountdir"
 rc=$? && [ "$rc" -eq 0 ] || exit $rc
 
-snaplocs=()
+snapdirs=()
 mountnames=()
 for src in "${BTRFS_SOURCES[@]}"; do
   if [ -z "$src" ] || [ ! -d "$src" ]; then
@@ -235,7 +237,17 @@ for src in "${BTRFS_SOURCES[@]}"; do
     continue
   fi
 
-  snaploc="$(realpath "$src/$btrfs_snapname")"
+  snapdir="$(realpath "$src/$BTRFS_SNAPDIR")"
+  mkdir -p "$snapdir"
+  rc=$?
+  if [ "$rc" -ne 0 ]; then
+    errcho "ERROR: Can't create snapshot directory '$snapdir'."
+    exit $rc
+  fi
+  snapdirs+=("$snapdir")
+
+  snapname="$(date '+%Y-%m-%d_%H-%M-%S')"
+  snaploc="$(realpath "$snapdir/$snapname")"
 
   mountname="$(basename "$src")"
   if [ "$mountname" == "/" ]; then
@@ -248,7 +260,6 @@ for src in "${BTRFS_SOURCES[@]}"; do
   fi
 
   btrfs subvolume snapshot -r "$src" "$snaploc" && \
-  snaplocs+=("$snaploc") && \
   mkdir -p "$mountname" && \
   mount --bind "$snaploc" "$mountname" && \
   mountnames+=("$mountname")
@@ -277,14 +288,18 @@ if [ ${#paths[@]} -gt 0 ]; then
 fi
 
 
-# unmount and delete btrfs snapshots
+# unmount btrfs snapshots
 for mountname in "${mountnames[@]}"; do
   umount -f "$mountname" && [ -z "$(ls -A "$mountname")" ] && rm -rf "$mountname"
 done
 cd ..
 [ -z "$(ls -A "$mountdir")" ] && rm -rf "$mountdir"
 
-[ "${#snaplocs[@]}" -gt 0 ] && btrfs subvolume delete "${snaplocs[@]}"
+# delete btrfs snapshots according to retention policy
+keep=$(("$BTRFS_KEEP_SNAPSHOTS" + 1))
+for snapdir in "${snapdirs[@]}"; do
+  ls -tp "$snapdir" | grep "/$" | tail -n +$keep | xargs -I {} btrfs subvolume delete -- "$snapdir/{}"
+done
 
 
 if [ "$rc" -ne 0 ]; then
