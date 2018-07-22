@@ -27,6 +27,9 @@ BTRFS_SNAPDIR=".snap"
 # Number of snapshots to keep locally. When the number of snapshots
 # grows beyond this number, the oldest ones are deleted. 0 means
 # keeping no local snapshots (the default behaviour).
+# NOTE: Don't ever place other files in the snapshot directory, because
+# the algorithm doesn't differentiate between snapshots and regular
+# files/directories.
 BTRFS_KEEP_SNAPSHOTS=0
 
 

@@ -135,7 +135,8 @@ esac
 
 # rewrite some config variables
 [ -z "$BTRFS_SNAPDIR" ] && BTRFS_SNAPDIR=".snap"
-[ -z "$BTRFS_KEEP_SNAPSHOTS" ] && BTRFS_KEEP_SNAPSHOTS=0
+BTRFS_KEEP_SNAPSHOTS=$(("$BTRFS_KEEP_SNAPSHOTS"))
+[ "$?" -ne 0 ] && BTRFS_KEEP_SNAPSHOTS=0
 
 # build paths for later use
 exclude_file="$(realpath "$CONFIG.exclude")"
@@ -296,9 +297,8 @@ cd ..
 [ -z "$(ls -A "$mountdir")" ] && rm -rf "$mountdir"
 
 # delete btrfs snapshots according to retention policy
-keep=$(("$BTRFS_KEEP_SNAPSHOTS" + 1))
 for snapdir in "${snapdirs[@]}"; do
-  ls -tp "$snapdir" | grep "/$" | tail -n +$keep | xargs -I {} btrfs subvolume delete -- "$snapdir/{}"
+  ls -p "$snapdir" | grep "/$" | head -n "-$BTRFS_KEEP_SNAPSHOTS" | xargs -I {} btrfs subvolume delete -- "$snapdir/{}"
 done
 
 
