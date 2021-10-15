@@ -1,7 +1,7 @@
 # backwrap
 
 A simple wrapper for creating backups written in bash. It currently
-supports borg and restic as backup tools.
+supports borg, kopia and restic as backup tools.
 
 Compared to the well-known borgmatic, this wrapper follows another
 philosophy. It aims to have no dependencies other than bash and
@@ -40,10 +40,14 @@ for you.
        ./backwrap
 
        # If you haven't done already, generate a secure passphrase and
-       # initialize the borg/restic repository to store your backups.
+       # initialize the repository storing your backups.
        umask 077
        pwgen -s 40 1 > backup.cfg.passphrase
        ./backwrap init
+       # For kopia, you'll need to do the initialization yourself, so just run the
+       # appropriate command for creating or connecting to an existing repository.
+       # The kopia documentation has more details about repositories and available
+       # storage options.
 
        # And this will take a backup.
        ./backwrap backup

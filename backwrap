@@ -66,6 +66,12 @@ run_borg() {
   return $?
 }
 
+run_kopia() {
+  export KOPIA_CONFIG_PATH
+  kopia "$@"
+  return $?
+}
+
 run_restic() {
   export RESTIC_REPOSITORY="$RESTIC_REPO"
   export RESTIC_PASSWORD_FILE="$passphrase_file"
@@ -124,10 +130,10 @@ fi
 
 # validate BACKUP_TOOL setting
 case "$BACKUP_TOOL" in
-  "borg" | "restic")
+  "borg" | "kopia" | "restic")
     ;;
   *)
-    errcho "ERROR: Set BACKUP_TOOL in your configuration."
+    errcho "ERROR: Set BACKUP_TOOL to a supported tool in your configuration."
     exit $USAGE_RC
     ;;
 esac
@@ -196,6 +202,11 @@ case "$action" in
       "borg")
         run_borg init $BORG_INIT_OPTS
         rc=$?
+        ;;
+      "kopia")
+        errcho "Initialization not supported for kopia."
+        errcho "Run 'kopia repository { create | connect } <flags>' yourself."
+        rc=1
         ;;
       "restic")
         run_restic init $RESTIC_INIT_OPTS
@@ -281,6 +292,10 @@ if [ ${#paths[@]} -gt 0 ]; then
       run_borg create $BORG_CREATE_OPTS "::$archname" "${paths[@]}"
       rc=$?
       ;;
+    "kopia")
+      run_kopia snapshot create $KOPIA_CREATE_OPTS "${paths[@]}"
+      rc=$?
+      ;;
     "restic")
       run_restic backup $RESTIC_BACKUP_OPTS --tag "$archname" "${paths[@]}"
       rc=$?
@@ -321,6 +336,8 @@ else
         run_restic forget $RESTIC_FORGET_OPTS
         rc=$?
       fi
+      ;;
+    *)
       ;;
   esac
 fi

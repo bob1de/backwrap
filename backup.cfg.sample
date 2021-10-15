@@ -35,7 +35,7 @@ BTRFS_KEEP_SNAPSHOTS=0
 
 # BACKUP TOOL
 #
-# Available choices: "borg", "restic"
+# Available choices: "borg", "kopia", "restic"
 #
 # You only need to configure the settings for the particular backup tool
 # you choose.
@@ -56,6 +56,21 @@ BORG_PRUNE_OPTS="--keep-daily 7 --keep-weekly 12 --keep-monthly 12 --keep-yearly
 
 # Additional options you want to pass to the "borg init" command.
 BORG_INIT_OPTS=""
+
+
+# KOPIA OPTIONS
+
+# The kopia configuration file. If not set, the default repository.config is used.
+KOPIA_CONFIG_PATH="$HOME/.config/kopia/repository.config"
+
+# Note that "backwrap init" is not supported for kopia. Create the kopia configuration
+# file by running "kopia repository create" or "kopia repository connect" yourself
+# before invoking backwrap.
+# Since kopia itself stores the repository password in a separate file
+# next to the configuration file upon creating or connecting to a repository,
+# placing the password in a "<backwrap-config-file>.passphrase" file is not necessary.
+# The optional "<backwrap-config-file>.exclude" file is also not considered as kopia
+# reads paths to exclude from policies stored inside the repository.
 
 
 # RESTIC OPTIONS
@@ -94,7 +109,7 @@ RESTIC_INIT_OPTS=""
 
 # There are two special files that, if they exist, are considered.
 # Let's assume the config file is called "/etc/backup.cfg", then the
-# script will look fo the following additional files in "/etc".
+# script will look fo the following additional files in "/etc":
 # - backup.cfg.exclude: A list of paths to exclude, will be passed as
 #   the exclude file to the backup tool.
 # - backup.cfg.passphrase: A file containing the passphrase for the
