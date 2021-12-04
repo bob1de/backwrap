@@ -29,7 +29,7 @@ ACTION:
   The "gen-crontab" action will print a line suitable to be added to a
   file in /etc/cron.d and exit. Use like so:
 
-    CONFIG=/etc/backwrap.d "$0" > /etc/cron.d/backwrap
+    CONFIG=/etc/backwrap.d "$0" gen-crontab > /etc/cron.d/backwrap
 
   The generated entry may also be added to a user-specific crontab
   file, in which case you simply need to remove the username field.
